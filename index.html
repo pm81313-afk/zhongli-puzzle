@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>中壢高商校徽 3×3 九宮格拼圖遊戲</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome 圖示 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600;700;900&display=swap');
+    
+    body {
+      font-family: 'Noto Sans TC', sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+
+    /* 拼圖棋盤格與拼圖塊動畫效果 */
+    .puzzle-board {
+      position: relative;
+      aspect-ratio: 1 / 1;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    }
+
+    .tile {
+      position: absolute;
+      transition: left 0.18s ease-out, top 0.18s ease-out, transform 0.1s ease;
+      cursor: pointer;
+      overflow: hidden;
+      border-radius: 10px;
+      box-sizing: border-box;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.25), inset 0 1px 1px rgba(255,255,255,0.4);
+    }
+
+    .tile:hover {
+      filter: brightness(1.05);
+    }
+
+    .tile:active {
+      transform: scale(0.96);
+    }
+
+    .tile-number-badge {
+      position: absolute;
+      top: 6px;
+      left: 6px;
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(4px);
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 14px;
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      pointer-events: none;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+    }
+
+    /* 漸層按鈕立體感 */
+    .btn-3d {
+      transition: all 0.15s ease;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
+    }
+    .btn-3d:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px -2px rgba(0,0,0,0.15), 0 3px 6px -2px rgba(0,0,0,0.1);
+    }
+    .btn-3d:active {
+      transform: translateY(1px);
+      box-shadow: 0 2px 4px -1px rgba(0,0,0,0.1);
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col justify-between antialiased">
+
+  <!-- 頂部導覽列與標題 -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-sm">
+    <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-red-600 flex items-center justify-center text-white font-bold text-lg shadow-md">
+          <i class="fa-solid fa-puzzle-piece"></i>
+        </div>
+        <div>
+          <h1 class="text-lg md:text-xl font-bold tracking-tight text-slate-900 leading-tight">中壢高商校徽九宮格拼圖</h1>
+          <p class="text-xs text-slate-500 font-medium">動動腦筋 · 經典滑動拼圖挑戰</p>
+        </div>
+      </div>
+      
+      <!-- 狀態指標：步數與時間 -->
+      <div class="flex items-center space-x-2 md:space-x-4">
+        <div class="bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-xl flex items-center space-x-2">
+          <i class="fa-solid fa-shoe-prints text-amber-500 text-sm"></i>
+          <div>
+            <div class="text-[10px] uppercase text-slate-400 font-semibold tracking-wider">步數</div>
+            <div id="step-counter" class="text-sm font-bold text-slate-700">0</div>
+          </div>
+        </div>
+        <div class="bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-xl flex items-center space-x-2">
+          <i class="fa-solid fa-clock text-blue-500 text-sm"></i>
+          <div>
+            <div class="text-[10px] uppercase text-slate-400 font-semibold tracking-wider">時間</div>
+            <div id="timer-display" class="text-sm font-bold text-slate-700">00:00</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- 主要內容區 -->
+  <main class="max-w-4xl w-full mx-auto p-4 flex-1 flex flex-col items-center justify-center">
+
+    <section class="w-full max-w-md mb-4 bg-white p-4 rounded-2xl shadow-sm border border-slate-200" aria-labelledby="player-label">
+      <label id="player-label" for="player-name" class="block text-sm font-bold text-slate-700 mb-2">玩家暱稱</label>
+      <input id="player-name" maxlength="30" autocomplete="nickname" placeholder="請輸入暱稱再開始遊玩" class="w-full border border-slate-300 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500" />
+      <p id="player-message" class="text-xs text-slate-500 mt-2" aria-live="polite">首次移動前請輸入姓名；本局開始後姓名與難度將固定。</p>
+    </section>
+
+    <!-- 遊戲設定與操作快捷列 -->
+    <div class="w-full max-w-md flex items-center justify-between mb-4 bg-white p-2.5 rounded-2xl shadow-sm border border-slate-200">
+      <div class="flex items-center space-x-2">
+        <!-- 難度設定 (洗牌深度) -->
+        <label for="difficulty-select" class="text-xs font-semibold text-slate-500 ml-1">難度:</label>
+        <select id="difficulty-select" class="text-xs bg-slate-100 border border-slate-200 rounded-lg px-2 py-1.5 font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500">
+          <option value="12">入門 (12 步)</option>
+          <option value="35" selected>標準 (35 步)</option>
+          <option value="80">大師 (80 步)</option>
+        </select>
+
+        <!-- 數字提示開關 -->
+        <button id="toggle-numbers-btn" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 flex items-center space-x-1.5 transition">
+          <i class="fa-solid fa-list-ol"></i>
+          <span id="number-toggle-text">號碼提示: 開</span>
+        </button>
+      </div>
+
+      <div class="flex items-center space-x-2">
+        <!-- 音效開關 -->
+        <button id="toggle-sound-btn" class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-600 bg-slate-50 border border-slate-200 hover:bg-slate-100 transition" title="開關音效">
+          <i id="sound-icon" class="fa-solid fa-volume-high text-xs"></i>
+        </button>
+        <!-- 原圖參考按鈕 -->
+        <button id="show-reference-btn" class="px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 rounded-lg text-xs font-semibold flex items-center space-x-1 transition" title="查看完整原圖">
+          <i class="fa-solid fa-eye"></i>
+          <span>原圖</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 拼圖區域與原圖浮窗容器 -->
+    <div class="relative w-full max-w-md flex flex-col items-center">
+      <!-- 拼圖主體棋盤 -->
+      <div id="puzzle-container" class="puzzle-board w-full bg-slate-200 rounded-2xl p-2 border-4 border-slate-300 shadow-xl overflow-hidden relative">
+        <!-- 九塊拼圖將由 JavaScript 動態生成在內 -->
+      </div>
+
+      <!-- 成功時覆蓋層 -->
+      <div id="win-overlay" class="absolute inset-0 bg-slate-900/85 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center p-6 text-center z-10 hidden">
+        <div class="w-16 h-16 bg-amber-400 text-amber-950 rounded-full flex items-center justify-center text-3xl mb-3 shadow-lg animate-bounce">
+          <i class="fa-solid fa-trophy"></i>
+        </div>
+        <h2 class="text-2xl font-black text-white mb-1 tracking-tight">恭喜過關！太厲害了！</h2>
+        <p class="text-slate-300 text-sm mb-4">順利拼出完整的「中壢高商校徽」</p>
+        
+        <div class="bg-white/10 border border-white/20 rounded-xl p-3 w-full max-w-xs mb-5 flex justify-around text-white">
+          <div>
+            <div class="text-xs text-slate-400">總步數</div>
+            <div id="final-steps" class="text-xl font-black text-amber-400">0</div>
+          </div>
+          <div class="border-r border-white/20"></div>
+          <div>
+            <div class="text-xs text-slate-400">花費時間</div>
+            <div id="final-time" class="text-xl font-black text-amber-400">00:00</div>
+          </div>
+        </div>
+
+        <button id="play-again-btn" class="btn-3d px-6 py-2.5 bg-gradient-to-r from-red-600 to-amber-600 text-white font-bold rounded-xl shadow-lg hover:from-red-500 hover:to-amber-500 flex items-center space-x-2">
+          <i class="fa-solid fa-rotate-right"></i>
+          <span>再來一局</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 底部控制按鈕組 -->
+    <div class="w-full max-w-md mt-5 flex flex-wrap gap-2.5 justify-center">
+      <button id="shuffle-btn" class="btn-3d flex-1 min-w-[130px] py-3 px-4 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl shadow-md flex items-center justify-center space-x-2">
+        <i class="fa-solid fa-shuffle"></i>
+        <span>重新洗牌</span>
+      </button>
+      <button id="reset-btn" class="btn-3d py-3 px-4 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold rounded-xl shadow-sm flex items-center justify-center space-x-2">
+        <i class="fa-solid fa-arrow-rotate-left text-slate-500"></i>
+        <span>復原成原圖</span>
+      </button>
+
+      <!-- 更換自訂圖片 -->
+      <label class="btn-3d py-3 px-4 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl shadow-md cursor-pointer flex items-center justify-center space-x-2">
+        <i class="fa-solid fa-image"></i>
+        <span>更換圖片</span>
+        <input type="file" id="image-upload" accept="image/*" class="hidden">
+      </label>
+    </div>
+
+    <section class="w-full max-w-md mt-5 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm" aria-labelledby="leaderboard-title">
+      <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+        <h2 id="leaderboard-title" class="text-lg font-bold text-slate-800">🏆 排行榜</h2>
+        <label class="text-sm text-slate-600">難度
+          <select id="leaderboard-filter" class="ml-1 border border-slate-300 rounded-lg px-2 py-1">
+            <option value="12">入門</option><option value="35" selected>標準</option><option value="80">大師</option>
+          </select>
+        </label>
+      </div>
+      <p class="text-xs text-slate-500 mb-3">依完成時間排序，時間相同時步數較少者優先。顯示前 10 名；成績保存在目前使用的裝置與瀏覽器。</p>
+      <div id="leaderboard" aria-live="polite"></div>
+      <p id="storage-message" class="text-xs text-red-700 mt-2" aria-live="polite"></p>
+    </section>
+
+    <!-- 遊戲說明提要 -->
+    <div class="w-full max-w-md mt-5 bg-white/70 backdrop-blur-sm border border-slate-200/80 rounded-xl p-3 text-xs text-slate-500">
+      <div class="font-semibold text-slate-700 mb-1 flex items-center">
+        <i class="fa-solid fa-lightbulb text-amber-500 mr-1.5"></i> 遊戲玩法提示：
+      </div>
+      <p>點選或在手機上點按與「空白格」相鄰的拼圖塊，即可將其滑動到空白位置。將 1~8 號拼圖塊排列整齊歸位，右下角出現最後一塊即為通關！</p>
+    </div>
+
+  </main>
+
+  <!-- 頁腳 -->
+  <footer class="py-3 text-center text-xs text-slate-400 border-t border-slate-200 bg-white">
+    九宮格滑動拼圖 · 中壢高商校徽專屬互動版
+  </footer>
+
+  <!-- 原圖對照彈窗 Modal -->
+  <div id="reference-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl relative">
+      <div class="flex justify-between items-center mb-3">
+        <h3 class="font-bold text-slate-800 text-base flex items-center">
+          <i class="fa-solid fa-image mr-2 text-blue-500"></i> 中壢高商校徽原圖參考
+        </h3>
+        <button id="close-modal-btn" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:text-slate-800 flex items-center justify-center transition">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      
+      <div class="aspect-square w-full rounded-xl overflow-hidden bg-white border-2 border-slate-200 p-2 flex items-center justify-center shadow-inner">
+        <img id="reference-image" class="w-full h-full object-contain" alt="中壢高商校徽完整參考原圖">
+      </div>
+
+      <div class="mt-4 text-center">
+        <button id="modal-ok-btn" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-white text-sm font-semibold rounded-xl">
+          我知道了，回遊戲
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 遊戲核心邏輯 -->
+  <script>
+    // --- 1. 中壢高商校徽 SVG 向量圖形內建資料 ---
+    // 圖案取「天圓地方」之象，上方紅圓「陽明」題字，底色改為純白
+    function createSchoolEmblemSvgDataUri() {
+      const svg = `
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="600" height="600">
+        <!-- 白色底色 -->
+        <rect width="600" height="600" fill="#ffffff" />
+        
+        <!-- 校徽整體置中與微調群組 -->
+        <g transform="translate(0, 15)">
+          <!-- 下方底座幾何結構 (藍屬智，暖色屬行) -->
+          <!-- 左側藍色翼展 -->
+          <polygon points="120,205 42,320 180,510 230,270" fill="#2d68c4" stroke="#111111" stroke-width="4" stroke-linejoin="round"/>
+          <path d="M 120 205 Q 175 250 230 270 L 180 510 Q 110 400 42 320 Z" fill="#3071d5" stroke="#111" stroke-width="4"/>
+
+          <!-- 右側藍色翼展 -->
+          <polygon points="480,205 558,320 420,510 370,270" fill="#2d68c4" stroke="#111111" stroke-width="4" stroke-linejoin="round"/>
+          <path d="M 480 205 Q 425 250 370 270 L 420 510 Q 490 400 558 320 Z" fill="#3071d5" stroke="#111" stroke-width="4"/>
+
+          <!-- 中央下半扇形結構底襯 -->
+          <path d="M 230 270 L 370 270 L 325 510 L 275 510 Z" fill="#ffffff" stroke="#111111" stroke-width="3" />
+
+          <!-- 左橘色彩條 -->
+          <polygon points="230,270 275,280 268,510 232,490" fill="#e27324" stroke="#111111" stroke-width="4"/>
+
+          <!-- 右橘色彩條 -->
+          <polygon points="370,270 325,280 332,510 368,490" fill="#e27324" stroke="#111111" stroke-width="4"/>
+
+          <!-- 中央紅色彩條 -->
+          <polygon points="275,280 325,280 332,510 268,510" fill="#dc2626" stroke="#111111" stroke-width="4"/>
+
+          <!-- 上方主體紅圓陽光（象徵太陽，永恒光明） -->
+          <circle cx="300" cy="142" r="110" fill="#dc2626" stroke="#111111" stroke-width="6"/>
+
+          <!-- 「陽明」校名篆書風格 (向量擬真呈現) -->
+          <g fill="none" stroke="#111111" stroke-width="11" stroke-linecap="round" stroke-linejoin="round">
+            <!-- 「明」字左偏旁：日 -->
+            <path d="M 226 95 L 226 185" />
+            <path d="M 226 95 C 245 92, 255 105, 255 130 L 255 185" />
+            <path d="M 226 125 L 255 125" />
+            <path d="M 226 155 L 255 155" />
+            <path d="M 226 185 L 255 185" />
+
+            <!-- 「明」字右偏旁：月 -->
+            <path d="M 270 70 C 278 115, 275 160, 266 210" />
+            <path d="M 270 70 C 295 68, 304 90, 303 145 C 303 185, 300 205, 296 212" />
+            <path d="M 272 110 L 302 108" />
+            <path d="M 271 148 L 301 146" />
+
+            <!-- 「陽」字左偏旁：阝 (雙耳旁) -->
+            <path d="M 326 70 L 326 210" stroke-width="12" />
+            <path d="M 326 75 C 348 72, 354 90, 345 105 C 336 112, 326 114, 326 114" />
+            <path d="M 326 114 C 354 116, 356 142, 345 160 C 336 170, 326 168, 326 168" />
+
+            <!-- 「陽」字右上方：日 -->
+            <rect x="360" y="65" width="34" height="42" rx="4" />
+            <path d="M 360 86 L 394 86" />
+
+            <!-- 「陽」字右下方：勿 -->
+            <path d="M 370 115 C 362 135, 350 160, 342 175" />
+            <path d="M 362 125 C 385 120, 395 132, 394 155 C 392 185, 386 205, 372 214" />
+            <!-- 內兩撇 -->
+            <path d="M 365 145 C 372 165, 376 188, 373 205" />
+            <path d="M 382 145 C 389 162, 392 180, 388 195" />
+          </g>
+        </g>
+      </svg>
+      `;
+      return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg.trim());
+    }
+
+    // --- 2. 簡易 Web Audio 音效產生器 ---
+    class SoundEffects {
+      constructor() {
+        this.ctx = null;
+        this.enabled = true;
+      }
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) {
+            this.ctx = new AudioContext();
+          }
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+      playMove() {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(320, this.ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(180, this.ctx.currentTime + 0.08);
+          gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.08);
+        } catch (e) {
+          // 靜音回退
+        }
+      }
+      playWin() {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+        try {
+          const notes = [261.6, 329.6, 392.0, 523.25]; // C E G C
+          notes.forEach((freq, index) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, this.ctx.currentTime + index * 0.12);
+            gain.gain.setValueAtTime(0.2, this.ctx.currentTime + index * 0.12);
+            gain.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + index * 0.12 + 0.3);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(this.ctx.currentTime + index * 0.12);
+            osc.stop(this.ctx.currentTime + index * 0.12 + 0.35);
+          });
+        } catch (e) {}
+      }
+    }
+
+    const sound = new SoundEffects();
+
+    // --- 3. 遊戲邏輯與狀態 ---
+    const GRID_SIZE = 3;
+    const TOTAL_TILES = 9;
+    
+    // tiles 陣列：索引代表目前棋盤位置 0~8 (0為左上，8為右下)
+    // 陣列值代表放置的圖塊號碼 0~8 (其中 8 為空白格)
+    let board = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+    let emptyIndex = 8; // 預設空白格在右下角
+    let currentImageSrc = 'logo.png';
+    let moveCount = 0;
+    let timerInterval = null;
+    let secondsElapsed = 0;
+    let isPlaying = false;
+    let showNumbers = true;
+    let isShuffling = false;
+    let roundReady = false;
+    let roundPlayer = '';
+    let roundDifficulty = '35';
+    let timerStartedAt = 0;
+    const RECORDS_KEY = 'zhongli-puzzle-records-v1';
+    let cachedRecords = [];
+    const NAME_KEY = 'zhongli-puzzle-player-v1';
+
+    // DOM 元素引用
+    const puzzleContainer = document.getElementById('puzzle-container');
+    const stepCounterEl = document.getElementById('step-counter');
+    const timerDisplayEl = document.getElementById('timer-display');
+    const winOverlay = document.getElementById('win-overlay');
+    const finalStepsEl = document.getElementById('final-steps');
+    const finalTimeEl = document.getElementById('final-time');
+    const shuffleBtn = document.getElementById('shuffle-btn');
+    const resetBtn = document.getElementById('reset-btn');
+    const playAgainBtn = document.getElementById('play-again-btn');
+    const toggleNumbersBtn = document.getElementById('toggle-numbers-btn');
+    const numberToggleText = document.getElementById('number-toggle-text');
+    const toggleSoundBtn = document.getElementById('toggle-sound-btn');
+    const soundIcon = document.getElementById('sound-icon');
+    const difficultySelect = document.getElementById('difficulty-select');
+    const imageUpload = document.getElementById('image-upload');
+    const showReferenceBtn = document.getElementById('show-reference-btn');
+    const referenceModal = document.getElementById('reference-modal');
+    const referenceImage = document.getElementById('reference-image');
+    const closeModalBtn = document.getElementById('close-modal-btn');
+    const modalOkBtn = document.getElementById('modal-ok-btn');
+
+    const playerNameInput = document.getElementById('player-name');
+    const playerMessage = document.getElementById('player-message');
+    const leaderboardFilter = document.getElementById('leaderboard-filter');
+    const leaderboard = document.getElementById('leaderboard');
+    const storageMessage = document.getElementById('storage-message');
+
+    async function renderLeaderboard() {
+      leaderboard.replaceChildren();
+      try {
+        cachedRecords = JSON.parse(localStorage.getItem(RECORDS_KEY) || '[]');
+        if (!Array.isArray(cachedRecords)) cachedRecords = [];
+        storageMessage.textContent = '';
+      } catch (error) { cachedRecords = []; storageMessage.textContent = '無法讀取此瀏覽器的成績。'; }
+      leaderboard.replaceChildren();
+      const ranked = cachedRecords.filter(r => r.difficulty === leaderboardFilter.value && typeof r.name === 'string' && Number.isFinite(r.seconds) && Number.isFinite(r.steps))
+        .sort((a, b) => a.seconds - b.seconds || a.steps - b.steps || String(a.completedAt).localeCompare(String(b.completedAt))).slice(0, 10);
+      if (!ranked.length) {
+        const empty = document.createElement('p'); empty.className = 'text-sm text-slate-500 py-3';
+        empty.textContent = storageMessage.textContent ? '尚未取得排行榜資料。' : '這個難度還沒有通關紀錄，快來挑戰吧！';
+        leaderboard.appendChild(empty); return;
+      }
+      const table = document.createElement('table'); table.className = 'w-full text-sm text-left';
+      const head = document.createElement('thead'); const headRow = document.createElement('tr');
+      ['名次', '暱稱', '時間', '步數', '日期'].forEach(label => {
+        const th = document.createElement('th'); th.scope = 'col'; th.className = 'py-2 pr-2 text-slate-500'; th.textContent = label; headRow.appendChild(th);
+      });
+      head.appendChild(headRow); table.appendChild(head);
+      const body = document.createElement('tbody');
+      ranked.forEach((record, index) => {
+        const row = document.createElement('tr'); row.className = 'border-t border-slate-100';
+        [String(index + 1), record.name, formatTime(record.seconds), String(record.steps), new Date(record.completedAt).toLocaleDateString('zh-TW')].forEach(value => {
+          const cell = document.createElement('td'); cell.className = 'py-2 pr-2 break-all'; cell.textContent = value; row.appendChild(cell);
+        }); body.appendChild(row);
+      }); table.appendChild(body); leaderboard.appendChild(table);
+    }
+
+    function startRoundIfNeeded() {
+      if (!roundReady || isShuffling) return false;
+      if (isPlaying) return true;
+      const name = playerNameInput.value.trim();
+      if (!name) {
+        playerMessage.textContent = '請先輸入姓名，再移動拼圖。';
+        playerMessage.className = 'text-xs text-red-700 mt-2';
+        playerNameInput.focus();
+        return false;
+      }
+      roundPlayer = name;
+      playerNameInput.disabled = true;
+      playerMessage.className = 'text-xs text-slate-500 mt-2';
+      playerMessage.textContent = '本局玩家：' + roundPlayer;
+      try { localStorage.setItem(NAME_KEY, name); } catch (error) { storageMessage.textContent = '無法儲存資料，請檢查瀏覽器儲存設定。'; }
+      isPlaying = true;
+      startTimer();
+      return true;
+    }
+
+    function saveResult() {
+      try {
+        const records = JSON.parse(localStorage.getItem(RECORDS_KEY) || '[]');
+        records.push({name:roundPlayer,difficulty:roundDifficulty,seconds:secondsElapsed,steps:moveCount,completedAt:new Date().toISOString()});
+        localStorage.setItem(RECORDS_KEY, JSON.stringify(records));
+        leaderboardFilter.value = roundDifficulty;
+        renderLeaderboard();
+      } catch (error) { storageMessage.textContent = '無法保存成績，請檢查瀏覽器儲存設定。'; }
+    }
+    leaderboardFilter.addEventListener('change', renderLeaderboard);
+    try { playerNameInput.value = localStorage.getItem(NAME_KEY) || ''; } catch (error) { storageMessage.textContent = '無法使用瀏覽器儲存功能。'; }
+    renderLeaderboard();
+
+    // 初始化參考圖
+    referenceImage.src = currentImageSrc;
+
+    // 格式化時間 (MM:SS)
+    function formatTime(sec) {
+      const mins = Math.floor(sec / 60).toString().padStart(2, '0');
+      const secs = (sec % 60).toString().padStart(2, '0');
+      return `${mins}:${secs}`;
+    }
+
+    function startTimer() {
+      if (timerInterval) clearInterval(timerInterval);
+      secondsElapsed = 0;
+      timerDisplayEl.textContent = '00:00';
+      timerStartedAt = Date.now();
+      timerInterval = setInterval(() => {
+        secondsElapsed = Math.floor((Date.now() - timerStartedAt) / 1000);
+        timerDisplayEl.textContent = formatTime(secondsElapsed);
+      }, 1000);
+    }
+
+    function stopTimer() {
+      if (timerInterval) {
+        secondsElapsed = Math.floor((Date.now() - timerStartedAt) / 1000);
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+    }
+
+    // 計算位置的 X, Y 百分比座標
+    function getPositionCoords(index) {
+      const row = Math.floor(index / GRID_SIZE);
+      const col = index % GRID_SIZE;
+      // 以百分比計算（3x3 間隔留些微空隙）
+      const padding = 2; // 格子間隔百分比
+      const width = (100 - padding * 4) / GRID_SIZE; // ~30.66%
+      const top = padding + row * (width + padding);
+      const left = padding + col * (width + padding);
+      return { top, left, width };
+    }
+
+    // 初始化/繪製九宮格 DOM
+    function renderBoard() {
+      puzzleContainer.innerHTML = '';
+      const tileWidthPercent = (100 - 8) / 3; // 依比例算出的寬高
+
+      for (let tileVal = 0; tileVal < TOTAL_TILES; tileVal++) {
+        // 找到這個 tileVal 目前位於 board 的哪個 index
+        const currentIndex = board.indexOf(tileVal);
+        const { top, left, width } = getPositionCoords(currentIndex);
+
+        const tileEl = document.createElement('div');
+        tileEl.classList.add('tile');
+        tileEl.dataset.tile = tileVal;
+        tileEl.style.width = `${width}%`;
+        tileEl.style.height = `${width}%`;
+        tileEl.style.top = `${top}%`;
+        tileEl.style.left = `${left}%`;
+
+        if (tileVal === 8) {
+          // 空白格
+          tileEl.classList.add('empty-tile');
+          tileEl.style.opacity = '0';
+          tileEl.style.pointerEvents = 'none';
+        } else {
+          // 正常拼圖塊：設定背景圖像位移
+          // 原始 tileVal 在 3x3 網格中的位置
+          const origRow = Math.floor(tileVal / GRID_SIZE);
+          const origCol = tileVal % GRID_SIZE;
+          const bgX = (origCol / (GRID_SIZE - 1)) * 100;
+          const bgY = (origRow / (GRID_SIZE - 1)) * 100;
+
+          tileEl.style.backgroundImage = `url('${currentImageSrc}')`;
+          tileEl.style.backgroundSize = '300% 300%';
+          tileEl.style.backgroundPosition = `${bgX}% ${bgY}%`;
+          tileEl.style.backgroundColor = '#ffffff';
+
+          // 提示號碼標籤
+          const badge = document.createElement('div');
+          badge.classList.add('tile-number-badge');
+          badge.textContent = tileVal + 1;
+          badge.style.display = showNumbers ? 'flex' : 'none';
+          tileEl.appendChild(badge);
+
+          // 點擊事件 (支援滑鼠與點觸)
+          tileEl.addEventListener('click', () => handleTileClick(tileVal));
+        }
+
+        puzzleContainer.appendChild(tileEl);
+      }
+    }
+
+    // 檢查某位置是否可以移動（與空白格相鄰：同列相差1 或 同欄相差3）
+    function canMove(index) {
+      const row = Math.floor(index / GRID_SIZE);
+      const col = index % GRID_SIZE;
+      const emptyRow = Math.floor(emptyIndex / GRID_SIZE);
+      const emptyCol = emptyIndex % GRID_SIZE;
+
+      const isAdjacent = (Math.abs(row - emptyRow) + Math.abs(col - emptyCol)) === 1;
+      return isAdjacent;
+    }
+
+    // 移動某塊拼圖
+    function moveTile(tileVal, isUserAction = true) {
+      const currentIndex = board.indexOf(tileVal);
+      if (!canMove(currentIndex)) return false;
+
+      // 交換 board 陣列中的位置
+      board[emptyIndex] = tileVal;
+      board[currentIndex] = 8;
+      const prevEmptyIndex = emptyIndex;
+      emptyIndex = currentIndex;
+
+      // 更新 DOM 位置
+      const tileEl = puzzleContainer.querySelector(`[data-tile="${tileVal}"]`);
+      if (tileEl) {
+        const { top, left } = getPositionCoords(prevEmptyIndex);
+        tileEl.style.top = `${top}%`;
+        tileEl.style.left = `${left}%`;
+      }
+
+      if (isUserAction) {
+        sound.playMove();
+        moveCount++;
+        stepCounterEl.textContent = moveCount;
+        checkWinCondition();
+      }
+      return true;
+    }
+
+    // 取得空白格所有可移動的鄰近合法位置
+    function getNeighbors(index) {
+      const neighbors = [];
+      const row = Math.floor(index / GRID_SIZE);
+      const col = index % GRID_SIZE;
+
+      if (row > 0) neighbors.push(index - 3); // 上
+      if (row < GRID_SIZE - 1) neighbors.push(index + 3); // 下
+      if (col > 0) neighbors.push(index - 1); // 左
+      if (col < GRID_SIZE - 1) neighbors.push(index + 1); // 右
+      return neighbors;
+    }
+
+    // 點擊處理
+    function handleTileClick(tileVal) {
+      if (!canMove(board.indexOf(tileVal)) || !startRoundIfNeeded()) return;
+      moveTile(tileVal, true);
+    }
+
+    // 檢查是否成功通關
+    function checkWinCondition() {
+      // 判斷 board 是否按序為 0,1,2,3,4,5,6,7,8
+      for (let i = 0; i < TOTAL_TILES; i++) {
+        if (board[i] !== i) return false;
+      }
+
+      // 全部歸位！通關成功
+      stopTimer();
+      isPlaying = false;
+      roundReady = false;
+      playerNameInput.disabled = false;
+      saveResult();
+      sound.playWin();
+
+      // 短暫延遲後顯示勝利覆蓋層
+      setTimeout(() => {
+        finalStepsEl.textContent = moveCount;
+        finalTimeEl.textContent = formatTime(secondsElapsed);
+        winOverlay.classList.remove('hidden');
+      }, 250);
+
+      return true;
+    }
+
+    // 洗牌演算法：由解法開始「逆向隨機滑動」
+    // 這種方式數學上 100% 保證可解，絕不會產生不可解的死局！
+    async function shuffleBoard() {
+      if (isShuffling) return;
+      isShuffling = true;
+      roundReady = false;
+      playerNameInput.disabled = false;
+      playerMessage.textContent = '首次移動前請輸入姓名；本局開始後姓名與難度將固定。';
+      playerMessage.className = 'text-xs text-slate-500 mt-2';
+      winOverlay.classList.add('hidden');
+      stopTimer();
+      moveCount = 0;
+      stepCounterEl.textContent = '0';
+      timerDisplayEl.textContent = '00:00';
+      isPlaying = false;
+
+      // 取得設定的步數
+      roundDifficulty = difficultySelect.value;
+      const steps = parseInt(roundDifficulty, 10) || 35;
+      let lastMovedTile = -1;
+
+      // 暫時降低轉場時間以便快速打亂
+      const tiles = puzzleContainer.querySelectorAll('.tile');
+      tiles.forEach(t => t.style.transition = 'left 0.06s ease, top 0.06s ease');
+
+      for (let i = 0; i < steps; i++) {
+        const neighbors = getNeighbors(emptyIndex);
+        // 避免剛移進來的圖塊馬上移回去，讓打亂更充分
+        const candidateNeighbors = neighbors.filter(pos => board[pos] !== lastMovedTile);
+        const targetPos = candidateNeighbors.length > 0
+          ? candidateNeighbors[Math.floor(Math.random() * candidateNeighbors.length)]
+          : neighbors[Math.floor(Math.random() * neighbors.length)];
+
+        const tileToMove = board[targetPos];
+        lastMovedTile = tileToMove;
+        moveTile(tileToMove, false);
+
+        // 每隔少許毫秒移動，營造洗牌動畫視覺
+        await new Promise(r => setTimeout(r, 25));
+      }
+
+      // 恢復正常滑動速度
+      tiles.forEach(t => t.style.transition = 'left 0.18s ease-out, top 0.18s ease-out, transform 0.1s ease');
+      isShuffling = false;
+      if (board.every((tile, index) => tile === index)) {
+        moveTile(board[getNeighbors(emptyIndex)[0]], false);
+      }
+      roundReady = true;
+    }
+
+    // 復原為原始排列
+    function resetToSolved() {
+      if (isShuffling) return;
+      roundReady = false;
+      playerNameInput.disabled = false;
+      playerMessage.textContent = '請按「重新洗牌」開始新的一局。';
+      winOverlay.classList.add('hidden');
+      stopTimer();
+      moveCount = 0;
+      stepCounterEl.textContent = '0';
+      timerDisplayEl.textContent = '00:00';
+      isPlaying = false;
+      board = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+      emptyIndex = 8;
+      renderBoard();
+    }
+
+    // --- 4. 事件監聽綁定 ---
+    
+    // 洗牌與重玩
+    shuffleBtn.addEventListener('click', shuffleBoard);
+    playAgainBtn.addEventListener('click', shuffleBoard);
+    resetBtn.addEventListener('click', resetToSolved);
+
+    // 切換數字提示
+    toggleNumbersBtn.addEventListener('click', () => {
+      showNumbers = !showNumbers;
+      numberToggleText.textContent = `號碼提示: ${showNumbers ? '開' : '關'}`;
+      const badges = puzzleContainer.querySelectorAll('.tile-number-badge');
+      badges.forEach(b => {
+        b.style.display = showNumbers ? 'flex' : 'none';
+      });
+    });
+
+    // 切換音效
+    toggleSoundBtn.addEventListener('click', () => {
+      sound.enabled = !sound.enabled;
+      if (sound.enabled) {
+        soundIcon.className = 'fa-solid fa-volume-high text-xs text-slate-700';
+        sound.playMove();
+      } else {
+        soundIcon.className = 'fa-solid fa-volume-xmark text-xs text-slate-400';
+      }
+    });
+
+    // 原圖預覽 Modal
+    showReferenceBtn.addEventListener('click', () => {
+      referenceImage.src = currentImageSrc;
+      referenceModal.classList.remove('hidden');
+    });
+    closeModalBtn.addEventListener('click', () => referenceModal.classList.add('hidden'));
+    modalOkBtn.addEventListener('click', () => referenceModal.classList.add('hidden'));
+    referenceModal.addEventListener('click', (e) => {
+      if (e.target === referenceModal) referenceModal.classList.add('hidden');
+    });
+
+    // 自訂上傳圖片
+    imageUpload.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          currentImageSrc = event.target.result;
+          referenceImage.src = currentImageSrc;
+          resetToSolved();
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    // 鍵盤方向鍵支援 (讓操作更多元)
+    window.addEventListener('keydown', (e) => {
+      if (isShuffling || e.target.matches('input, select, textarea') || referenceModal.contains(e.target)) return;
+      const row = Math.floor(emptyIndex / GRID_SIZE);
+      const col = emptyIndex % GRID_SIZE;
+      let targetIndex = -1;
+
+      // 箭頭方向表示把該方向的磚塊推入空白處
+      if (e.key === 'ArrowUp' && row < GRID_SIZE - 1) {
+        targetIndex = emptyIndex + 3; // 空白格下方的方塊往上推
+      } else if (e.key === 'ArrowDown' && row > 0) {
+        targetIndex = emptyIndex - 3; // 空白格上方的方塊往下推
+      } else if (e.key === 'ArrowLeft' && col < GRID_SIZE - 1) {
+        targetIndex = emptyIndex + 1; // 空白格右邊的方塊往左推
+      } else if (e.key === 'ArrowRight' && col > 0) {
+        targetIndex = emptyIndex - 1; // 空白格左邊的方塊往右推
+      }
+
+      if (targetIndex !== -1) {
+        e.preventDefault();
+        if (startRoundIfNeeded()) moveTile(board[targetIndex], true);
+      }
+    });
+
+    // 觸控滑動支援 (滑動手勢)
+    let touchStartX = 0;
+    let touchStartY = 0;
+    puzzleContainer.addEventListener('touchstart', (e) => {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+
+    puzzleContainer.addEventListener('touchend', (e) => {
+      if (isShuffling) return;
+      const touchEndX = e.changedTouches[0].clientX;
+      const touchEndY = e.changedTouches[0].clientY;
+      const dx = touchEndX - touchStartX;
+      const dy = touchEndY - touchStartY;
+      const absDx = Math.abs(dx);
+      const absDy = Math.abs(dy);
+
+      // 最小滑動距離閥值
+      if (Math.max(absDx, absDy) > 30) {
+        const row = Math.floor(emptyIndex / GRID_SIZE);
+        const col = emptyIndex % GRID_SIZE;
+        let targetIndex = -1;
+
+        if (absDx > absDy) {
+          // 水平滑動
+          if (dx > 0 && col > 0) targetIndex = emptyIndex - 1; // 往右滑
+          else if (dx < 0 && col < GRID_SIZE - 1) targetIndex = emptyIndex + 1; // 往左滑
+        } else {
+          // 垂直滑動
+          if (dy > 0 && row > 0) targetIndex = emptyIndex - 3; // 往下滑
+          else if (dy < 0 && row < GRID_SIZE - 1) targetIndex = emptyIndex + 3; // 往上滑
+        }
+
+        if (targetIndex !== -1) {
+          if (startRoundIfNeeded()) moveTile(board[targetIndex], true);
+        }
+      }
+    }, { passive: true });
+
+    // --- 5. 視窗載入啟動 ---
+    window.onload = function() {
+      renderBoard();
+      // 載入時自動為學生完成一次標準打亂，即開即玩
+      setTimeout(() => {
+        shuffleBoard();
+      }, 400);
+    };
+  </script>
+</body>
+</html>
